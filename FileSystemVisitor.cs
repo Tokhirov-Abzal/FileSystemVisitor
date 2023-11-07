@@ -1,19 +1,30 @@
-﻿
+﻿using System;
 
 
 namespace FileSystemVisitor
 {
+    // allows us to provide any arguments for subscribers
+    public class FileVisitorEventArgs : EventArgs
+    {
+        public FileVisitorEventArgs(string message)
+        {
+            Message = message;
+        }
+
+        public string Message { get; set; }
+    }
+
     public class FileSystemVisitor : IEnumerable<string>
     {
         private readonly string rootPath;
         private readonly Func<string, bool> filter;
 
-        public event EventHandler? Started;
-        public event EventHandler? Finished;
-        public event EventHandler<string>? FileFound;
-        public event EventHandler<string>? DirectoryFound;
-        public event EventHandler<string>? FilteredFileFound;
-        public event EventHandler<string>? FilteredDirectoryFound;
+        public event EventHandler<FileVisitorEventArgs> Started;
+        public event EventHandler<FileVisitorEventArgs> Finished;
+        public event EventHandler<FileVisitorEventArgs> FileFound;
+        public event EventHandler<FileVisitorEventArgs> DirectoryFound;
+        public event EventHandler<FileVisitorEventArgs> FilteredFileFound;
+        public event EventHandler<FileVisitorEventArgs> FilteredDirectoryFound;
 
         public FileSystemVisitor(string rootPath, Func<string, bool> filterAlgorithm = null)
         {
@@ -23,33 +34,33 @@ namespace FileSystemVisitor
 
         public IEnumerator<string> GetEnumerator()
         {
-            OnStarted();
+            Started(this, new FileVisitorEventArgs("Proccess has been started"));
             foreach (string item in GetFileSystemEntries(rootPath))
             {
                 yield return item;
             }
-            OnFinished();
+            Finished(this, new FileVisitorEventArgs("Proccess has been finished"));
         }
 
         private IEnumerable<string> GetFileSystemEntries(string directory)
         {
             foreach (string file in Directory.GetFiles(directory).Where(filter))
             {
-                OnFileFound(file);
+                FileFound(this, new FileVisitorEventArgs($"File was found: {file}"));
                 if (filter(file))
                 {
-                    OnFilteredFileFound(file);
+                    FilteredFileFound(this, new FileVisitorEventArgs($"Filtered file was found: ${file}"));
                     yield return file;
                 }
             }
 
             foreach (string subDirectory in Directory.GetDirectories(directory).Where(filter))
             {
-                OnDirectoryFound(subDirectory);
+                DirectoryFound(this, new FileVisitorEventArgs($"Directory was found: {subDirectory}"));
 
                 if (filter(subDirectory))
                 {
-                    OnFilteredDirectoryFound(subDirectory);
+                    FilteredDirectoryFound(this, new FileVisitorEventArgs($"Filtered directory was found: {subDirectory}"));
                     yield return subDirectory;
                 }
 
@@ -65,35 +76,7 @@ namespace FileSystemVisitor
             return GetEnumerator();
         }
 
-        protected virtual void OnStarted()
-        {
-            Started?.Invoke(this, EventArgs.Empty);
-        }
 
-        protected virtual void OnFinished()
-        {
-            Finished?.Invoke(this, EventArgs.Empty);
-        }
-
-        protected virtual void OnFileFound(string filePath)
-        {
-            FileFound?.Invoke(this, filePath);
-        }
-
-        protected virtual void OnDirectoryFound(string directoryPath)
-        {
-            DirectoryFound?.Invoke(this, directoryPath);
-        }
-
-        protected virtual void OnFilteredFileFound(string filePath)
-        {
-            FilteredFileFound?.Invoke(this, filePath);
-        }
-
-        protected virtual void OnFilteredDirectoryFound(string directoryPath)
-        {
-            FilteredDirectoryFound?.Invoke(this, directoryPath);
-        }
     }
 
 }
