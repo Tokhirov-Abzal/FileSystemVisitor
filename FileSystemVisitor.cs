@@ -1,15 +1,30 @@
 ﻿
 
+using System;
 
 namespace FileSystemVisitor
 {
+    // allows us to provide any arguments for subscribers
+    public class FileVisitorEventArgs : EventArgs
+    {
+        public FileVisitorEventArgs(string message)
+        {
+            Message = message;
+        }
+
+        public string Message { get; set; }
+    }
+
+
     public class FileSystemVisitor : IEnumerable<string>
     {
         private readonly string rootPath;
         private readonly Func<string, bool> filter;
 
-        public event EventHandler? Started;
-        public event EventHandler? Finished;
+        // let's call this events as points for subscriptions 
+        // the class FileSystemVisitor publish the events 
+        public event EventHandler<FileVisitorEventArgs>? Started;
+        public event EventHandler<FileVisitorEventArgs> Finished;
         public event EventHandler<string>? FileFound;
         public event EventHandler<string>? DirectoryFound;
         public event EventHandler<string>? FilteredFileFound;
@@ -23,12 +38,16 @@ namespace FileSystemVisitor
 
         public IEnumerator<string> GetEnumerator()
         {
-            OnStarted();
+            //OnStarted();
+            // Raise the event
+            Started(this, new FileVisitorEventArgs("Proccess has been started."));
             foreach (string item in GetFileSystemEntries(rootPath))
             {
                 yield return item;
             }
-            OnFinished();
+
+            //OnFinished();
+            Finished(this, new FileVisitorEventArgs("Proccess has been finished."));
         }
 
         private IEnumerable<string> GetFileSystemEntries(string directory)
@@ -65,15 +84,17 @@ namespace FileSystemVisitor
             return GetEnumerator();
         }
 
-        protected virtual void OnStarted()
-        {
-            Started?.Invoke(this, EventArgs.Empty);
-        }
+        // we don't need these here
 
-        protected virtual void OnFinished()
-        {
-            Finished?.Invoke(this, EventArgs.Empty);
-        }
+        //protected virtual void OnStarted()
+        //{
+        //    Started?.Invoke(this, EventArgs.Empty);
+        //}
+
+        //protected virtual void OnFinished()
+        //{
+        //    Finished?.Invoke(this, EventArgs.Empty);
+        //}
 
         protected virtual void OnFileFound(string filePath)
         {
